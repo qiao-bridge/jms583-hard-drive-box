@@ -123,7 +123,11 @@
 > 64GB 大文件测试，验证持续读写稳定性。
 
 ![CrystalDiskMark USB3 Gen2 4GB 测试](assets/_test_3gen2_CrystalDiskMark_4GB.png)
-> USB 3.1 Gen 2 模式下 4GB 测试块结果。
+> USB 3.1 Gen 2 模式下 4GB 测试块结果, 顺序读取约 700MB/s。
+
+![SSD benchmark 1G](assets/_test_win_1G.png)
+![SSD benchmark 5G](assets/_test_win_5G.png)
+> benchmark，验证持续读写稳定性。
 
 #### Blackmagic Disk Speed Test（macOS）
 
@@ -182,7 +186,7 @@
 
 ---
 
-## 使用说明
+## 如何使用
 
 ### 制作 PCB
 
@@ -208,34 +212,27 @@
 
 ---
 
-## 固件与 Windows 测试
+## 固件说明
 
-固件与升级 / 测试工具见 [`firmware/`](./firmware) 目录。
+> 本项目包含 **两套固件**，分别对应两个主控：
+> 1. **JMS583** 桥接芯片固件（USB ↔ NVMe 桥接逻辑）
+> 2. **STC8G1K08A** 单片机固件（风扇 / 呼吸灯 / adc等控制逻辑）
 
-> ⚠️ **升级固件有风险**：刷写错误可能导致设备无法识别，请确认文件与硬件版本匹配后再操作，风险自负。
+### 1. JMS583 固件
 
-### Windows 下测试步骤
+- **作用**：实现 USB 3.2 Gen 2 与 PCIe NVMe 之间的协议桥接。
+- **文件**：见仓库 `firmware/jms583/` 目录。
+- **升级方式**：通常通过厂商工具FwUpdateTool.exe `firmware/jms583/tools`通过 USB 接口在线升级。
+- **注意**：
+  - 在刷写的时候看看有没有Flash的信息，jms583支持挺多厂商的，如果没有flash的信息，烧录会是比啊，检查是不是焊接问题（包括那个QFN的焊接）或者是换个芯片。
+  - 固件升级过程与本仓库的 STC8G1K08A 烧录是**两个独立流程**，请勿混淆。
 
-1. 将硬盘盒接入 Windows PC；
-2. 确认磁盘管理器中识别到 SSD，完成初始化 / 格式化（NTFS / exFAT 等）；
-3. 运行 CrystalDiskMark 或 AS SSD Benchmark，选择目标盘进行测试；
-4. 参考 [实物展示 - 速度测试](#速度测试) 对比读取是否达到约 400MB/s。
+### 2. STC8G1K08A 固件
 
-![Windows 测试](assets/_test_win_1G.png)
-> Windows 下 CrystalDiskMark 识别与速度测试界面示意。
-
-![Windows 5G 测试](assets/_test_win_5G.png)
-
-### 固件升级（如需）
-
-1. 在 [`firmware/`](./firmware) 中选取对应版本的 `.bin` 文件；
-2. 使用厂商提供的升级工具（通常需进入升级模式，如短接特定引脚）；
-3. 按工具提示完成烧录，**过程中切勿断开连接**。
-
-> 若使用 STC8G1K08A 等辅助单片机，需先用对应烧录工具下载程序：
-
-![STC8G1K08A 单片机烧录](assets/_1stc8g1k08a单片机烧录.jpg)
-> STC8G1K08A 烧录接线与过程示意。
+- **作用**：控制散热风扇、WS2812呼吸灯、adc等辅助逻辑。
+- **开发环境**：Keil C51。
+- **烧录方式**：通过串口（UART）连接 STC8G1K08A 的 **P3.0 (RxD) / P3.1 (TxD)** 引脚，使用 STC-ISP 工具烧录。
+- **烧录要点**：stc8g的供电和串口的供电时同一路，见![STC8G1K08A 烧录](assets/_1stc8g1k08a单片机烧录.jpg)
 
 ---
 
