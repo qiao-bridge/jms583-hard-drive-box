@@ -1,0 +1,11 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\stc8g_adc.obj",
+".\Objects\stc8g_delay.obj",
+".\Objects\stc8g_gpio.obj",
+".\Objects\stc8g_timer_pwm.obj",
+".\Objects\stc8g_uart.obj",
+".\Objects\stc8g_ntc_table.obj",
+".\Objects\stc8g_ws2812.obj" 
+TO ".\Objects\project" 
+PRINT(".\Listings\project.m51") RAMSIZE(256) 

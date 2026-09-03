@@ -1,0 +1,161 @@
+C51 COMPILER V9.54   STC8G_PWM                                                             08/30/2026 23:27:10 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_PWM
+OBJECT MODULE PLACED IN .\Objects\stc8g_pwm.obj
+COMPILER INVOKED BY: D:\software\keil c51\C51\BIN\C51.EXE Bsp\stc8g_pwm.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\02_stc8g_KE
+                    -Y;.\Bsp) DEBUG OBJECTEXTEND PRINT(.\Listings\stc8g_pwm.lst) OBJECT(.\Objects\stc8g_pwm.obj)
+
+line level    source
+
+   1          #include "stc8g_pwm.h"
+   2          
+   3          /* --------------------------------------------------------
+   4           * PCA 初始化 —— 10位 PWM，CCP0 通道
+   5           * PCA 时钟 = SYSCLK/12 = 11.0592M/12 = 921.6kHz
+   6           * PWM 频率 = 921.6k / 1024 ≈ 900 Hz（LED 调光够用）
+   7           * 想拉高频率：CMOD 改 0x00(/1) → 10.8kHz，或切 8 位
+   8           *--------------------------------------------------------*/
+   9          void stc8g_pwm_init(unsigned char port, unsigned char pin, unsigned char channel)
+  10          {
+  11   1          // 1. IO 推挽
+  12   1              stc8g_gpio_init(port, pin, 1);
+  13   1      
+  14   1          // 2. PCA 总控
+  15   1          CCON  = 0x00;       // 关闭PCA计数器，清 CF/CCF0/1/2 标志
+  16   1          CMOD  = 0x01;       // PCA 时钟 = SYSCLK/12，禁止溢出中断// 想用 /1(1T) 改 0x08，/4=0x02，/2=0x01     
+             -                  
+  17   1          CL = CH = 0x00;                     // 计数器清零
+  18   1      
+  19   1              // 3. CCP0 通道 → PWM 模式
+  20   1              switch(channel){
+  21   2                      case 0:
+  22   2                              CCAPM0=0x42;    //ECOM=1 + PWM=1，使能比较 + PWM 输出
+  23   2                              PCA_PWM0=0xC0;  //使能10位PWM输出
+  24   2                              CCAP0L=0x00;    //捕获比较寄存器低8位，比较值（用于和ch、cl进行比较）
+  25   2                              CCAP0H=0x00;    //捕获比较寄存器高8位，重装值（发生溢出，将重装值给到比较值）
+  26   2                              
+  27   2                      break;
+  28   2                      
+  29   2                      case 1:
+  30   2                              CCAPM1=0x42;
+  31   2                              PCA_PWM1=0xC0; 
+  32   2                              CCAP1L=0x00;    
+  33   2                              CCAP1H=0x00;    
+  34   2                      break;
+  35   2                      
+  36   2                      case 2: 
+  37   2                              CCAPM2=0x42; 
+  38   2                              PCA_PWM2=0xC0; 
+  39   2                              CCAP2L=0x00;    
+  40   2                              CCAP2H=0x00;                            
+  41   2                      break;
+  42   2              }
+  43   1          
+  44   1          // 4. 启动
+  45   1              CR=1;   //启动计数器
+  46   1              
+  47   1          //EA = 1;//在main函数中开启
+  48   1      }
+  49          
+  50          
+  51          void stc8g_pwm_setduty(unsigned char percentage, unsigned char channel)
+  52          {
+  53   1              //注意：在更新 10 位 PWM 的重载值时，必须先写高两位 XCCAPnH[1:0]，再写低 8 位 CCAPnH[7:0]。
+C51 COMPILER V9.54   STC8G_PWM                                                             08/30/2026 23:27:10 PAGE 2   
+
+  54   1              unsigned char perc = (percentage > 100) ? 100 : percentage;
+  55   1              unsigned short compare;
+  56   1              
+  57   1              switch(channel){
+  58   2                      case 0:
+  59   2                              //失能PCA模块0_PWM输出
+  60   2                              CCAPM0   = 0x40;  
+  61   2                      
+  62   2                              if (perc == 0) {
+  63   3                      // 0% 恒低：先清EPCnH/EPCnL，再置EPCnL=1（只开低开关）
+  64   3                      PCA_PWM0 = (PCA_PWM0 & ~0xC0) | 0x40;  // ? 就改了这行掩码，原来是~0x30
+  65   3                      CCAP0H = 0xFF;
+  66   3                  } else if (perc >= 100) {
+  67   3                      // 100% 恒高：先清EPCnH/EPCnL，再置EPCnH=1（只开高开关）
+  68   3                      PCA_PWM0 = (PCA_PWM0 & ~0xC0) | 0x80;  // ? 就改了这行掩码，原来是~0x30
+  69   3                      CCAP0H = 0x00;
+  70   3                  } else {
+  71   3                      // 正常占空比：EPC清0，计算比较值
+  72   3                      compare = (100 - perc) * 1024 / 100;
+  73   3                      PCA_PWM0 &= ~0xC0;   // EPC清0
+  74   3                      PCA_PWM0 = (compare & ~0x30) | (((compare >> 8) & 0x03) << 4);
+  75   3                      CCAP0H = compare & 0xFF;
+  76   3                  }
+  77   2                      
+  78   2                              //使能PCA模块0_PWM输出
+  79   2                              CCAPM0   = 0x42;      
+  80   2                      break;
+  81   2                      
+  82   2                      case 1:
+  83   2                              CCAPM1   = 0x40;           
+  84   2                              
+  85   2                              if (perc == 0) {
+  86   3                      PCA_PWM1 = (PCA_PWM1 & ~0xC0) | 0x40;  // ? 仅改掩码
+  87   3                      CCAP1H = 0xFF;
+  88   3                  } else if (perc >= 100) {
+  89   3                      PCA_PWM1 = (PCA_PWM1 & ~0xC0) | 0x80;  // ? 仅改掩码
+  90   3                      CCAP1H = 0x00;
+  91   3                  } else {
+  92   3                      compare = (100 - perc) * 1024 / 100;
+  93   3                      PCA_PWM1 &= ~0xC0;
+  94   3                      PCA_PWM1 = (PCA_PWM1 & ~0x30) | (((compare >> 8) & 0x03) << 4);
+  95   3                      CCAP1H = compare & 0xFF;
+  96   3                  }
+  97   2                      
+  98   2                              CCAPM1   = 0x42;                
+  99   2                      break;
+ 100   2                      
+ 101   2                      case 2:
+ 102   2                              CCAPM2   = 0x40;           
+ 103   2                              if (perc == 0) {
+ 104   3                      PCA_PWM2 = (PCA_PWM2 & ~0xC0) | 0x40;  // ? 仅改掩码
+ 105   3                      CCAP2H = 0xFF;
+ 106   3                  } else if (perc >= 100) {
+ 107   3                      PCA_PWM2 = (PCA_PWM2 & ~0xC0) | 0x80;  // ? 仅改掩码
+ 108   3                      CCAP2H = 0x00;
+ 109   3                  } else {
+ 110   3                      compare = (100 - perc) * 1024 / 100;
+ 111   3                      PCA_PWM2 &= ~0xC0;
+ 112   3                      PCA_PWM2 = (PCA_PWM2 & ~0x30) | (((compare >> 8) & 0x03) << 4);
+ 113   3                      CCAP2H = compare & 0xFF;
+ 114   3                  }
+ 115   2              
+C51 COMPILER V9.54   STC8G_PWM                                                             08/30/2026 23:27:10 PAGE 3   
+
+ 116   2                              CCAPM2   = 0x42;                
+ 117   2                      break;
+ 118   2              }
+ 119   1      }
+ 120          
+ 121          
+ 122          
+ 123          /* --------------------------------------------------------
+ 124           * 切 CCP0 脚到 _2（比如 P1.1/CCP0_2）
+ 125           * 要看你手册"PCA 功能脚切换表"，1K08A SOP16 大致是这样：
+ 126           *   CCP_S[1:0]=00 → CCP0=P3.3, CCP1=P3.4, CCP2=P3.5
+ 127           *   CCP_S[1:0]=01 → CCP0=P1.1, CCP1=P1.0, CCP2=P1.2?（具体以手册为准）
+ 128           *--------------------------------------------------------*/
+ 129          //void PCA_SwitchPins(uint8_t ccp_s)
+ 130          //{
+ 131          //    P_SW1 = (P_SW1 & ~0x30) | ((ccp_s & 0x03) << 4);  // CCP_S = bit5~4
+ 132          //}
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    378    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,117 @@
+C51 COMPILER V9.54   MAIN                                                                  08/31/2026 15:53:21 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\software\keil c51\C51\BIN\C51.EXE main.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(..\02_stc8g_KEY;.
+                    -\Bsp) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC8G.H>
+   2          #include "stc8g_gpio.h"
+   3          #include "stc8g_uart.h"
+   4          #include "stc8g_delay.h"
+   5          #include "stc8g_adc.h"
+   6          #include "stc8g_timer_pwm.h"  
+   7          #include "stc8g_ws2812.h"
+   8          
+   9          /* ================= 用户配置：温度-转速曲线 ================= */
+  10          #define TEMP_LOW     25    /* 低于 25.0℃：风扇停转 */
+  11          #define TEMP_HIGH    60    /* 高于 60.0℃：风扇满速 */
+  12          #define HYSTERESIS   2     /* 2.0℃ 滞回，防止临界点频繁启停 */
+  13          
+  14          
+  15          /* 三路权重（与 stc8g_adc.h 中 TEMP_WEIGHT 保持一致，仅用于打印说明） */
+  16          
+  17          /**
+  18           * @brief 根据平均温度计算并设置风扇 PWM
+  19           * @param  avg_temp: 加权平均温度 (0.1℃)
+  20           */
+  21          static void Fan_Update(int avg_temp)
+  22          {
+  23   1          static unsigned char last_duty = 0;
+  24   1          unsigned char target;
+  25   1      
+  26   1          if (avg_temp < TEMP_LOW) {
+  27   2              target = 0;
+  28   2          } else if (avg_temp >= TEMP_HIGH) {
+  29   2              target = 100;
+  30   2          } else {
+  31   2              /* 线性：25~60℃ 对应 0%~100% */
+  32   2              target = (unsigned char)((avg_temp - TEMP_LOW) * 100L / (TEMP_HIGH - TEMP_LOW));
+  33   2          }
+  34   1      
+  35   1          /* 迟滞：只有变化超过HYSTERESIS时才更新 */
+  36   1          if (target > last_duty + HYSTERESIS) {
+  37   2              last_duty = target;
+  38   2          } else if (target + HYSTERESIS < last_duty) {
+  39   2              last_duty = target;
+  40   2          }
+  41   1          timer0_pwm_setduty(last_duty);   
+  42   1      }
+  43          
+  44          void main(void)
+  45          {
+  46   1          int temps[3];
+  47   1          int avg_temp;
+  48   1      
+  49   1          // 1. GPIO 初始化
+  50   1          stc8g_gpio_init(3, 0, 2);  // P3.0 RXD
+  51   1          stc8g_gpio_init(3, 1, 1);  // P3.1 TXD
+  52   1          stc8g_gpio_init(3, 2, 2);  // P3.2 ADC 输入
+  53   1          stc8g_gpio_init(3, 3, 2);  // P3.3 ADC 输入
+  54   1          stc8g_gpio_init(5, 4, 2);  // P5.4 ADC 输入
+C51 COMPILER V9.54   MAIN                                                                  08/31/2026 15:53:21 PAGE 2   
+
+  55   1      
+  56   1          // 2. 串口初始化
+  57   1          //UartInit();
+  58   1      
+  59   1          // 3. ADC 初始化
+  60   1              ADCInit();  // 仅一次
+  61   1      
+  62   1          // 4. 校准参考电压（可选）
+  63   1          //int vref = adcreference();
+  64   1      
+  65   1          // 5. PWM 初始化
+  66   1          timer0_pwm_init(5, 5);              // P5.5 PWM 输出
+  67   1          timer0_pwm_setfreq(21600);
+  68   1          timer0_pwm_setduty(50);
+  69   1          timer0_pwm_enable(1);
+  70   1              
+  71   1              // 6.ws2812呼吸灯初始化
+  72   1              ws2812_init();
+  73   1      
+  74   1          ES = 1;
+  75   1          EA = 1;
+  76   1              
+  77   1              
+  78   1          while(1)
+  79   1          {
+  80   2              // 采集温度并获取加权平均
+  81   2              avg_temp = ADC_SampleTemperatures(temps);
+  82   2      
+  83   2              // 根据温度设置 PWM
+  84   2              Fan_Update(avg_temp);
+  85   2                      
+  86   2                      // 更新 WS2812 灯效
+  87   2                      ws2812_update_by_temp(avg_temp);
+  88   2      
+  89   2              delay_ms(1);
+  90   2          }
+  91   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    257    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      1       9
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

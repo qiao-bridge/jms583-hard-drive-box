@@ -1,0 +1,182 @@
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_TIMER_PWM
+OBJECT MODULE PLACED IN .\Objects\stc8g_timer_pwm.obj
+COMPILER INVOKED BY: D:\software\keil c51\C51\BIN\C51.EXE Bsp\stc8g_timer_pwm.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(..
+                    -\02_stc8g_KEY;.\Bsp) DEBUG OBJECTEXTEND PRINT(.\Listings\stc8g_timer_pwm.lst) OBJECT(.\Objects\stc8g_timer_pwm.obj)
+
+line level    source
+
+   1          #include "stc8g_timer_pwm.h"
+   2          
+   3          // ¾²Ì¬±äÁ¿£º¼ÇÂ¼µ±Ç°IOµçÆ½£¨0=µÍ£¬1=¸ß£©
+   4          static volatile unsigned char pwm_current_level = 0;
+   5          
+   6          // PWMÈ«¾ÖÅäÖÃ£¨volatile·ÀÖ¹±àÒëÆ÷ÓÅ»¯£¬ÖÐ¶ÏÀïÓÃµÄ±äÁ¿±ØÐë¼Ó£©
+   7          volatile unsigned char pwm_duty = 50;    // Õ¼¿Õ±È0~100%
+   8          volatile unsigned int pwm_freq = 21600; // PWMÆµÂÊ£¬Ä¬ÈÏ21.6kHz£¨ÊÊÅä4Ïß·çÉÈ£©
+   9          volatile bit pwm_en = 0;                 // PWMÊ¹ÄÜ¿ª¹Ø
+  10          
+  11          // ¶¨Ê±Æ÷0³õÖµ»º´æ£¨Ë«»º³å£¬±ÜÃâÖÐ¶ÏÀï¸ÄÖµ²úÉúÃ«´Ì£©
+  12          volatile unsigned int pwm_high_th = 0;  // ¸ßµçÆ½¶¨Ê±³õÖµ£¨¸ß8Î»£©
+  13          volatile unsigned int pwm_high_tl = 0;  // ¸ßµçÆ½¶¨Ê±³õÖµ£¨µÍ8Î»£©
+  14          volatile unsigned int pwm_low_th = 0;   // µÍµçÆ½¶¨Ê±³õÖµ£¨¸ß8Î»£©
+  15          volatile unsigned int pwm_low_tl = 0;   // µÍµçÆ½¶¨Ê±³õÖµ£¨µÍ8Î»£©
+  16          
+  17          /**
+  18           * ¶¨Ê±Æ÷0 PWM³õÊ¼»¯
+  19           * ÅäÖÃ£º16Î»Ä£Ê½£¬1·ÖÆµ£¨11.0592MHz¼ÆÊýÆµÂÊ£©£¬¿ªÖÐ¶Ï
+  20           */
+  21          void timer0_pwm_init(unsigned char pwm_port, unsigned char pwm_pin)
+  22          {
+  23   1          // 1. IOÅäÖÃ£ºÍÆÍìÊä³ö£¨ºÍÄãÖ®Ç°µÄstc8g_gpio_initÒ»ÖÂ£©
+  24   1          stc8g_gpio_init(pwm_port, pwm_pin, 1);
+  25   1              P55=0;
+  26   1              
+  27   1          // 2. ¶¨Ê±Æ÷Ä£Ê½ÅäÖÃ£ºÄ£Ê½1£¨16Î»¶¨Ê±Æ÷£¬²»×Ô¶¯ÖØ×°£©
+  28   1          TMOD &= 0xF0; // Çå¶¨Ê±Æ÷0µÄÄ£Ê½Î»£¨¸ß4Î»Áô¸ø¶¨Ê±Æ÷1£©
+  29   1          TMOD |= 0x01; // M1=0, M0=1 ¡ú Ä£Ê½1
+  30   1      
+  31   1          // 3. ·ÖÆµÅäÖÃ£º1·ÖÆµ£¨11.0592MHz¼ÆÊýÆµÂÊ£¬¶ÔÓ¦PCAµÄ1TÄ£Ê½£©
+  32   1          AUXR |= 0x80;  // T0x12=1 ¡ú 1·ÖÆµ£¬¼ÆÊýÖÜÆÚ=1/11.0592M¡Ö0.0904us
+  33   1          // Èç¹ûÒª12·ÖÆµ£¨ºÍ´«Í³8051Ò»ÖÂ£©£¬¸Ä³É AUXR &= ~0x80;
+  34   1      
+  35   1          // 4. ³õÊ¼ÆµÂÊ/Õ¼¿Õ±È¼ÆËã£¨Ä¬ÈÏ21.6kHz£¬50%Õ¼¿Õ±È£©
+  36   1          timer0_pwm_setfreq(pwm_freq);
+  37   1          timer0_pwm_setduty(pwm_duty);
+  38   1      
+  39   1          // 5. ÖÐ¶ÏÅäÖÃ
+  40   1          ET0 = 1; // ¿ª¶¨Ê±Æ÷0ÖÐ¶Ï
+  41   1          EA  = 1; // ¿ª×ÜÖÐ¶Ï
+  42   1      
+  43   1          // 6. Ä¬ÈÏ²»Æô¶¯£¬µÈenableºóÔÙ¿ª
+  44   1          TR0 = 0;
+  45   1      }
+  46          
+  47          /**
+  48           * ÉèÖÃPWMÆµÂÊ£¨Hz£©
+  49           * ¹«Ê½ÍÆµ¼£º
+  50           * ¼ÆÊýÆµÂÊ f_count = 11.0592MHz / ·ÖÆµÏµÊý£¨ÕâÀï·ÖÆµ=1£©
+  51           * ¼ÆÊýÖÜÆÚ t_count = 1 / f_count ¡Ö 0.0904us
+  52           * PWMÖÜÆÚ T = 1/freq
+  53           * ¸ßµçÆ½Ê±¼ä t_high = T * duty/100
+  54           * µÍµçÆ½Ê±¼ä t_low = T * (100-duty)/100
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 2   
+
+  55           * ¸ßµçÆ½¼ÆÊý´ÎÊý N_high = t_high / t_count
+  56           * µÍµçÆ½¼ÆÊý´ÎÊý N_low = t_low / t_count
+  57           * ¶¨Ê±³õÖµ = 65536 - ¼ÆÊý´ÎÊý
+  58           */
+  59          void timer0_pwm_setfreq(unsigned int freq)
+  60          {
+  61   1          unsigned long period_us;      // PWMÖÜÆÚ£¨Î¢Ãë£©
+  62   1          unsigned long high_us, low_us; // ¸ßµÍµçÆ½³ÖÐøÊ±¼ä£¨Î¢Ãë£©
+  63   1          unsigned int high_cnt, low_cnt; // ¸ßµÍµçÆ½¼ÆÊý´ÎÊý
+  64   1          unsigned int duty = pwm_duty; // ¶ÁÈ¡µ±Ç°Õ¼¿Õ±È
+  65   1      
+  66   1          if(freq == 0) freq = 1; // ·ÀÖ¹³ýÁã
+  67   1          period_us = 1000000UL / freq; // ÖÜÆÚ×ªÎ¢Ãë
+  68   1      
+  69   1          // ¼ÆËã¸ßµÍµçÆ½Ê±¼ä
+  70   1          high_us = period_us * duty / 100;
+  71   1          low_us  = period_us * (100 - duty) / 100;
+  72   1      
+  73   1          // ×ª³É¼ÆÊý´ÎÊý£¨1·ÖÆµÏÂ£¬¼ÆÊýÖÜÆÚ¡Ö0.0904us£©
+  74   1          high_cnt = (unsigned int)(high_us / 0.090422455); // 1/11.0592e6 *1e6
+  75   1          low_cnt  = (unsigned int)(low_us  / 0.090422455);
+  76   1      
+  77   1      
+  78   1          // Ë«»º³å£ºÏÈ¼ÆËãºÃ³õÖµ£¬ÔÙ¸³Öµ¸øÈ«¾Ö±äÁ¿£¬±ÜÃâÖÐ¶ÏÀï¶Áµ½°ë³ÉÆ·
+  79   1          pwm_high_th = (65536 - high_cnt) >> 8; // ¸ß8Î»
+  80   1          pwm_high_tl = (65536 - high_cnt) & 0xFF; // µÍ8Î»
+  81   1          pwm_low_th  = (65536 - low_cnt) >> 8;
+  82   1          pwm_low_tl  = (65536 - low_cnt) & 0xFF;
+  83   1      }
+  84          
+  85          /**
+  86           * ÉèÖÃÕ¼¿Õ±È£¨0~100%£©
+  87           * Ë«»º³åÂß¼­£ºÖ»¸ÄÕ¼¿Õ±È±äÁ¿£¬ÏÂ´ÎsetfreqÊ±×Ô¶¯ÉúÐ§£¬±ÜÃâÃ«´Ì
+  88           */
+  89          void timer0_pwm_setduty(unsigned char duty)
+  90          {
+  91   1              //Èí¼þ·­×ªIOµÄ·½Ê½×ö²»µ½¾ø¶ÔµÄ0%/100%£¬±ØÐë¹Ø¶¨Ê±Æ÷Ö±½ÓÀ­IO£¬²»È»ÄÄÅÂ¼ÆÊýÉè³É0£¬ÖÐ¶Ï´¥·¢Ò»´ÎÒ²»á³öÕ­Âö³å¡
+             -£
+  92   1          if(duty > 100) duty = 100;
+  93   1          pwm_duty = duty;
+  94   1          
+  95   1          // ? ÐÂÔö£º0%Õ¼¿Õ±È£¬Ö±½Ó¹Ø¶¨Ê±Æ÷+À­µÍIO
+  96   1          if(duty == 0) {
+  97   2              timer0_pwm_enable(0);
+  98   2              return;
+  99   2          }
+ 100   1          // ? ÐÂÔö£º100%Õ¼¿Õ±È£¬Ö±½Ó¹Ø¶¨Ê±Æ÷+À­¸ßIO
+ 101   1          if(duty >= 100) {
+ 102   2              timer0_pwm_enable(0);
+ 103   2              stc8g_gpio_set_level(3, 3, 1); // Ö±½ÓÀ­¸ß£¬²»ÓÃ¶¨Ê±Æ÷·­×ª
+ 104   2              return;
+ 105   2          }
+ 106   1          
+ 107   1          // Õý³£Õ¼¿Õ±È²ÅÖØÐÂ¼ÆËã²ÎÊý
+ 108   1          timer0_pwm_setfreq(pwm_freq);
+ 109   1          timer0_pwm_enable(1);
+ 110   1      }
+ 111          
+ 112          /**
+ 113           * Ê¹ÄÜ/Ê§ÄÜPWM
+ 114           */
+ 115          void timer0_pwm_enable(bit en)
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 3   
+
+ 116          {
+ 117   1          pwm_en = en;
+ 118   1          if(en) {
+ 119   2              // Æô¶¯Ê±Ä¬ÈÏÊä³öµÍµçÆ½£¬¼ÓÔØµÍµçÆ½³õÖµ
+ 120   2              pwm_current_level = 0;
+ 121   2              P33=0;
+ 122   2              TH0 = pwm_low_th;
+ 123   2              TL0 = pwm_low_tl;
+ 124   2              TR0 = 1; // Æô¶¯¶¨Ê±Æ÷0
+ 125   2          } else {
+ 126   2              TR0 = 0; // Í£Ö¹¶¨Ê±Æ÷0
+ 127   2              P33=0; // Êä³öµÍµçÆ½
+ 128   2          }
+ 129   1      }
+ 130          
+ 131          /**
+ 132           * ¶¨Ê±Æ÷0ÖÐ¶Ï·þÎñº¯Êý
+ 133           * ºËÐÄÂß¼­£ºÃ¿´ÎÒç³ö·­×ªIO£¬ÖØ×°¶ÔÓ¦µçÆ½µÄ³õÖµ
+ 134           * ÖÐ¶ÏÀïÖ»×ö×î¼ò²Ù×÷£¬²»ºÄÊ±£¬·ûºÏÄãÖ®Ç°Ñ§µÄ¡°ÖÐ¶Ï¿ì½ø¿ì³ö¡±Ô­Ôò
+ 135           */
+ 136          void Timer0_ISR(void) interrupt 1
+ 137          {
+ 138   1          if(pwm_en == 0) return; // PWMÎ´Ê¹ÄÜ£¬Ö±½ÓÍË³ö
+ 139   1      
+ 140   1          if(pwm_current_level == 0) {
+ 141   2              // µ±Ç°ÊÇµÍµçÆ½£¬·­×ªÎª¸ßµçÆ½£¬ÖØ×°¸ßµçÆ½³õÖµ
+ 142   2              TH0 = pwm_high_th;
+ 143   2              TL0 = pwm_high_tl;
+ 144   2                      pwm_current_level = 1;
+ 145   2              P55=1;
+ 146   2          } else {
+ 147   2              // µ±Ç°ÊÇ¸ßµçÆ½£¬·­×ªÎªµÍµçÆ½£¬ÖØ×°µÍµçÆ½³õÖµ
+ 148   2              TH0 = pwm_low_th;
+ 149   2              TL0 = pwm_low_tl;
+ 150   2                      pwm_current_level = 0;
+ 151   2              P55=0;
+ 152   2          }
+ 153   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    546    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     12      19
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

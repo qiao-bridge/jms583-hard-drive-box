@@ -1,0 +1,188 @@
+C51 COMPILER V9.54   STC8G_WS2812                                                          08/31/2026 15:53:22 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_WS2812
+OBJECT MODULE PLACED IN .\Objects\stc8g_ws2812.obj
+COMPILER INVOKED BY: D:\software\keil c51\C51\BIN\C51.EXE Bsp\stc8g_ws2812.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(..\02
+                    -_stc8g_KEY;.\Bsp) DEBUG OBJECTEXTEND PRINT(.\Listings\stc8g_ws2812.lst) OBJECT(.\Objects\stc8g_ws2812.obj)
+
+line level    source
+
+   1          #include "stc8g_ws2812.h"
+   2          #include "stc8g_gpio.h"
+   3          #include "stc8g_delay.h"
+   4          
+   5          // ==================== 内部变量 ====================
+   6          static RGB_Color current_colors[WS2812_NUM];
+   7          static unsigned int pos_acc = 0;          // 位置累加器（0~999）
+   8          static unsigned char current_index = 0;   // 当前亮灯索引
+   9          
+  10          // ==================== 直接端口操作 ====================
+  11          #define WS2812_HIGH()  P3 |= 0x02
+  12          #define WS2812_LOW()   P3 &= 0xFD
+  13          
+  14          // 11.0592MHz / 1T：1个_nop_() = 90.4ns
+  15          #define T1H()  do{ WS2812_HIGH(); _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); }while(0)
+  16          #define T1L()  do{ WS2812_LOW();  _nop_(); _nop_(); _nop_(); _nop_(); }while(0)
+  17          #define T0H()  do{ WS2812_HIGH(); _nop_(); _nop_(); _nop_(); }while(0)
+  18          #define T0L()  do{ WS2812_LOW();  _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); _nop_(); }while(0)
+  19          
+  20          // ==================== 底层：发送一个字节 ====================
+  21          static void ws2812_send_byte(unsigned char dat)
+  22          {
+  23   1          unsigned char mask;
+  24   1          for (mask = 0x80; mask != 0; mask >>= 1) {
+  25   2              if (dat & mask) { T1H(); T1L(); }
+  26   2              else            { T0H(); T0L(); }
+  27   2          }
+  28   1      }
+  29          
+  30          // ==================== 对外接口 ====================
+  31          void ws2812_init(void)
+  32          {
+  33   1          stc8g_gpio_init(3, 1, 1);
+  34   1          WS2812_LOW();
+  35   1          ws2812_clear();
+  36   1      }
+  37          
+  38          void ws2812_send_color(unsigned char index, RGB_Color color)
+  39          {
+  40   1          if (index < WS2812_NUM) {
+  41   2              current_colors[index] = color;
+  42   2          }
+  43   1      }
+  44          
+  45          void ws2812_show_all(RGB_Color *colors)
+  46          {
+  47   1          unsigned char i;
+  48   1          EA = 0;
+  49   1          for (i = 0; i < WS2812_NUM; i++) {
+  50   2              ws2812_send_byte(colors[i].g);
+  51   2              ws2812_send_byte(colors[i].r);
+  52   2              ws2812_send_byte(colors[i].b);
+  53   2          }
+  54   1          EA = 1;
+C51 COMPILER V9.54   STC8G_WS2812                                                          08/31/2026 15:53:22 PAGE 2   
+
+  55   1          WS2812_LOW();
+  56   1          delay_us(60);
+  57   1      }
+  58          
+  59          void ws2812_clear(void)
+  60          {
+  61   1          unsigned char i;
+  62   1          RGB_Color black = {0, 0, 0};
+  63   1          for (i = 0; i < WS2812_NUM; i++) {
+  64   2              current_colors[i] = black;
+  65   2          }
+  66   1          ws2812_show_all(current_colors);
+  67   1      }
+  68          
+  69          // ==================== 色环查表：温度 → 颜色 ====================
+  70          typedef struct {
+  71              unsigned char r;
+  72              unsigned char g;
+  73              unsigned char b;
+  74          } RGB888;
+  75          
+  76          static const RGB888 color_table[13] = {
+  77              {  0,   0, 255},   // 20℃ 蓝
+  78              {  0, 128, 255},   // 25℃
+  79              {  0, 255, 255},   // 30℃ 青
+  80              {  0, 255, 128},   // 35℃
+  81              {  0, 255,   0},   // 40℃ 绿
+  82              {128, 255,   0},   // 45℃
+  83              {255, 255,   0},   // 50℃ 黄
+  84              {255, 200,   0},   // 55℃
+  85              {255, 128,   0},   // 60℃ 橙
+  86              {255,  64,   0},   // 65℃
+  87              {255,  32,   0},   // 70℃
+  88              {255,  16,   0},   // 75℃
+  89              {255,   0,   0},   // 80℃ 红
+  90          };
+  91          
+  92          static unsigned char lerp(unsigned char a, unsigned char b, unsigned char frac)
+  93          {
+  94   1          return a + ((unsigned int)(b - a) * frac / 32);
+  95   1      }
+  96          
+  97          static RGB_Color temp_to_color(int avg_temp)
+  98          {
+  99   1          RGB_Color c;
+ 100   1          if (avg_temp <= 20) {
+ 101   2              c.r = 0;   c.g = 0;   c.b = 160;   // 蓝色，略亮
+ 102   2              return c;
+ 103   2          } else if (avg_temp >= 80) {
+ 104   2              c.r = 255; c.g = 0;   c.b = 0;
+ 105   2              return c;
+ 106   2          } else {
+ 107   2              unsigned char idx = (avg_temp - 20) / 5;
+ 108   2              unsigned char seg = (avg_temp - 20) % 5;
+ 109   2              unsigned char frac = seg * 32 / 5;
+ 110   2              c.r = lerp(color_table[idx].r, color_table[idx+1].r, frac);
+ 111   2              c.g = lerp(color_table[idx].g, color_table[idx+1].g, frac);
+ 112   2              c.b = lerp(color_table[idx].b, color_table[idx+1].b, frac);
+ 113   2              return c;
+ 114   2          }
+ 115   1      }
+ 116          
+C51 COMPILER V9.54   STC8G_WS2812                                                          08/31/2026 15:53:22 PAGE 3   
+
+ 117          // ==================== 主接口：流水灯 + 温度决定速度 ====================
+ 118          void ws2812_update_by_temp(int avg_temp)
+ 119          {
+ 120   1          unsigned char i;
+ 121   1          RGB_Color base_color;
+ 122   1          unsigned int step;          // 累加器步进（0~999，越大越快）
+ 123   1          RGB_Color black = {0,0,0};
+ 124   1      
+ 125   1          // 1. 获取基础颜色
+ 126   1          base_color = temp_to_color(avg_temp);
+ 127   1      
+ 128   1          // 2. 计算步进：温度越高，step 越大
+ 129   1          //    20℃ → step=2，80℃ → step=122，差距61倍
+ 130   1          //    你可以自行调整系数，例如改成 (avg_temp-20)*3 获得更大差距
+ 131   1          if (avg_temp <= 20) {
+ 132   2              step = 2;
+ 133   2          } else if (avg_temp >= 80) {
+ 134   2              step = 130;             // 高温最快
+ 135   2          } else {
+ 136   2              step = 2 + (avg_temp - 20) * 1;   // 20℃:2, 80℃:122
+ 137   2          }
+ 138   1      
+ 139   1          // 3. 累加器推进
+ 140   1          pos_acc += step;
+ 141   1          if (pos_acc >= 800) {       // 阈值800，每800步移动一格（可调）
+ 142   2              pos_acc -= 800;
+ 143   2              current_index++;
+ 144   2              if (current_index >= WS2812_NUM) {
+ 145   3                  current_index = 0;
+ 146   3              }
+ 147   2          }
+ 148   1      
+ 149   1          // 4. 设置灯阵：只有 current_index 亮，其余灭
+ 150   1          for (i = 0; i < WS2812_NUM; i++) {
+ 151   2              if (i == current_index) {
+ 152   3                  ws2812_send_color(i, base_color);
+ 153   3              } else {
+ 154   3                  ws2812_send_color(i, black);
+ 155   3              }
+ 156   2          }
+ 157   1      
+ 158   1          // 5. 显示
+ 159   1          ws2812_show_all(current_colors);
+ 160   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    847    ----
+   CONSTANT SIZE    =      6    ----
+   XDATA SIZE       =     57      31
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

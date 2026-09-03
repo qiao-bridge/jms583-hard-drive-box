@@ -1,0 +1,92 @@
+C51 COMPILER V9.54   STC8G_KEY                                                             08/30/2026 23:27:10 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_KEY
+OBJECT MODULE PLACED IN .\Objects\stc8g_key.obj
+COMPILER INVOKED BY: D:\software\keil c51\C51\BIN\C51.EXE Bsp\stc8g_key.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\02_stc8g_KE
+                    -Y;.\Bsp) DEBUG OBJECTEXTEND PRINT(.\Listings\stc8g_key.lst) OBJECT(.\Objects\stc8g_key.obj)
+
+line level    source
+
+   1          #include "stc8g_key.h"
+   2          
+   3          /* 私有变量 */
+   4          static bit key_pressed = 0;
+   5          static Key_Callback_t key_callback = 0;  // 回调函数指针
+   6          static bit key_lock = 0;
+   7          static unsigned char timeout = 0;
+   8          
+   9          /* INT0 初始化 */
+  10          void Key_Init(void)
+  11          {
+  12   1          /* P3.2 高阻输入 适合按键有上拉电阻*/
+  13   1          //stc8g_gpio_init(3, 2, 2);
+  14   1              
+  15   1              /* P3.2 准双向口 没有上拉电阻，可能按下按键导致浮空状态*/
+  16   1              stc8g_gpio_init(3, 2, 0);  
+  17   1          P32 = 1;                   
+  18   1      
+  19   1          IT0 = 1;     // 下降沿触发
+  20   1          EX0 = 1;     // 允许 INT0
+  21   1          // EA 在 main 中统一开启
+  22   1      }
+  23          
+  24          /* 注册回调函数 */
+  25          void Key_RegisterCallback(Key_Callback_t cb)
+  26          {
+  27   1          key_callback = cb;
+  28   1      }
+  29          
+  30          /* INT0 中断服务函数 */
+  31          static void Int0_Isr(void) interrupt 0
+  32          {
+  33   1          key_pressed = 1;
+  34   1      }
+  35          
+  36          /* 主循环调用：处理按键事件 */
+  37          
+  38          void Key_Process(void)
+  39          {
+  40   1          // 只有未锁定、且有按键事件时才处理，防止重复触发
+  41   1          if (key_pressed && !key_lock)
+  42   1          {
+  43   2              key_lock = 1;  // 锁定，本次按键处理完前不再响应
+  44   2              delay_ms(20);   // 消抖
+  45   2      
+  46   2              if (P32 == 0)
+  47   2              {
+  48   3                  if (key_callback)
+  49   3                  {
+  50   4                      key_callback();  // 只调用一次回调
+  51   4                  }
+  52   3              }
+  53   2      
+  54   2              // 带超时的松手等待，防止按键卡住导致系统死机
+C51 COMPILER V9.54   STC8G_KEY                                                             08/30/2026 23:27:10 PAGE 2   
+
+  55   2              
+  56   2              while (P32 == 0 && timeout < 200)  // 最长等待2秒
+  57   2              {
+  58   3                  delay_ms(10);
+  59   3                  timeout++;
+  60   3              }
+  61   2      
+  62   2              delay_ms(20);
+  63   2              key_pressed = 0;
+  64   2              key_lock = 0;  // 解锁，允许下一次按键
+  65   2          }
+  66   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     92    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
