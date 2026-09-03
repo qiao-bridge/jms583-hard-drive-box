@@ -75,10 +75,9 @@
 
 > 系统整体架构（USB Type-C → JMS583 桥接 → M.2 固态）。完整原理图见 [`hardware/`](./hardware) 目录。
 
-![PCB 布局](assets/_0背面效果.jpg)
 > PCB 布局与焊接完成效果，可见 JMS583 主控、M.2 插槽与 Type-C 接口的位置关系。
 
-> 详见 [`hardware/`](./hardware) 目录下的原理图、PCB 源文件（如立创 EDA / Altium 工程）。
+> 详见 [`hardware/`](./hardware) 目录下的原理图、PCB 源文件（如立创EDA）。
 
 ---
 
