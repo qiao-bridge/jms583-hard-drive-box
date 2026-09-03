@@ -1,6 +1,6 @@
 # JMS583 硬盘盒
 
-> 基于 JMS583 主控的 M.2 NVMe/SATA 固态硬盘盒开源项目，采用「硬盘盒 + M.2 固态」的组合形式，**顺序读取速度可达 400MB/s**，兼顾大容量与高速读写。
+> 基于 JMS583 主控的 M.2 NVMe 固态硬盘盒开源项目，采用「硬盘盒 + M.2 固态」的组合形式，**顺序读取速度可达 700MB/s**，兼顾大容量与高速读写。
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-JMS583-orange.svg)](https://www.jmicron.com/)
@@ -44,7 +44,7 @@
 ## 特性
 
 - 🚀 **主控芯片**：JMicron JMS583（USB 3.1 Gen 2 to NVMe Bridge）
-- 💾 **存储接口**：M.2 M-Key（NVMe），具体以硬件版本为准
+- 💾 **存储接口**：M.2 M-Key（NVMe）
 - 🔌 **上行接口**：USB Type-C（USB 3.1 Gen 2，10Gbps）
 - ⚡ **性能**：顺序读取可达 **700MB/s**（受 SSD 与线缆质量影响）
 - 🧊 **散热**：PCB 预留散热片，内置涡轮风扇，外壳开散热窗
@@ -73,16 +73,6 @@
 └─────────────────────────────────────────────┘
 ```
 
-主要元器件：
-
-| 位号 | 器件 | 说明 |
-|------|------|------|
-| U1 | JMS583 | 核心桥接主控 |
-| U2 | 时钟晶振 | 提供 25MHz 参考时钟 |
-| U3 | LDO / DCDC | 为核心与 M.2 供电（3.3V / 1.2V 等） |
-| J1 | USB Type-C | 上行数据 & 供电 |
-| J2 | M.2 插槽 | 安装 NVMe / SATA 固态 |
-| — | 滤波电容 / ESD | 电源完整性 & 接口保护 |
 
 > 系统整体架构（USB Type-C → JMS583 桥接 → M.2 固态）。完整原理图见 [`hardware/`](./hardware) 目录。
 
@@ -107,14 +97,14 @@
 
 #### CrystalDiskMark（Windows）
 
+![CrystalDiskMark USB3 Gen2 4GB 测试](assets/_test_3gen2_CrystalDiskMark_4GB.png)
+> USB 3.1 Gen 2 模式下 4GB 测试块结果, 顺序读取约 700MB/s。
+
 ![CrystalDiskMark 1GB 测试](assets/_test_CrystalDiskMark_1G.png)
 > 1GB 测试块，顺序读取约 400MB/s。
 
 ![CrystalDiskMark 64GB 测试](assets/_test_CrystalDiskMark_64GB.png)
 > 64GB 大文件测试，验证持续读写稳定性。
-
-![CrystalDiskMark USB3 Gen2 4GB 测试](assets/_test_3gen2_CrystalDiskMark_4GB.png)
-> USB 3.1 Gen 2 模式下 4GB 测试块结果, 顺序读取约 700MB/s。
 
 ![SSD benchmark 1G](assets/_test_win_1G.png)
 ![SSD benchmark 5G](assets/_test_win_5G.png)
@@ -150,8 +140,6 @@
 ![背面效果](assets/_0背面效果.jpg)
 
 > 装配流程分解：
-![烧录JMS583固件](assets/.jpg)
-> 烧录固件。
 
 ![焊接风扇](assets/_2焊接风扇.jpg)
 > 焊接风扇与散热相关元件。
