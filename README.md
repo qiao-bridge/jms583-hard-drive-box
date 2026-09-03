@@ -23,7 +23,7 @@
   - [速度测试](#装配步骤)
 - [快速开始](#快速开始)
 - [固件说明](#固件说明)
-  - [JMS583固件](#1.JMS583固件)
+  - [JMS583固件](#JMS583固件)
   - [STC8G1K08A固件](#STC8G1K08A固件)
 - [目录结构](#目录结构)
 - [开源许可](#开源许可)
@@ -194,7 +194,7 @@
 > 1. **JMS583** 桥接芯片固件（USB ↔ NVMe 桥接逻辑）
 > 2. **STC8G1K08A** 单片机固件（风扇 / 呼吸灯 / adc等控制逻辑）
 
-### 1.JMS583固件
+### JMS583固件
 - **作用**：实现 USB 3.2 Gen 2 与 PCIe NVMe 之间的协议桥接。
 - **文件**：见仓库 `firmware/jms583/` 目录。
 - **升级方式**：通常通过厂商工具FwUpdateTool.exe `firmware/jms583/tools`通过 USB 接口在线升级。
@@ -237,9 +237,8 @@ jms583硬盘盒/
 
 - [JMicron JMS583 产品页](https://www.jmicron.com/)
 - [嘉立创开源硬件平台 - 本项目](https://oshwhub.com/qiao_wen/jms583-based-hard-disk-box)
-- 感谢社区对桥接方案与 PCB 设计的讨论与贡献。
 
 ---
 
 > 本文档随项目持续更新。如发现错误或有改进建议，欢迎提 Issue / PR。
-��如发现错误或有改进建议，欢迎提 Issue / PR。
+如发现错误或有改进建议，欢迎提 Issue / PR。
