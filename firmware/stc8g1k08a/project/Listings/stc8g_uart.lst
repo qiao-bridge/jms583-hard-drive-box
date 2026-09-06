@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   STC8G_UART                                                            08/31/2026 15:53:22 PAGE 1   
+C51 COMPILER V9.54   STC8G_UART                                                            09/06/2026 17:01:47 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_UART
@@ -62,7 +62,7 @@ line level    source
   52   1          // 处理换行符：将 '\n' 转换为 '\r\n'
   53   1          if (dat == '\n')
   54   1              UartSend('\r');
-C51 COMPILER V9.54   STC8G_UART                                                            08/31/2026 15:53:22 PAGE 2   
+C51 COMPILER V9.54   STC8G_UART                                                            09/06/2026 17:01:47 PAGE 2   
 
   55   1          
   56   1          UartSend((char)dat);

@@ -38,20 +38,30 @@ int ADC_SampleTemperatures(int *out_temps)
     int i;
     int avg;
 
-    // 1. 读取三路 ADC（每次读取前自动切换通道）加的系数代表实际芯片的温度要比测量的要搞一些
-    adc_val[0] = ADC_ReadChannel(2) + 3;  // P3.2 - JMS583
-    adc_val[1] = ADC_ReadChannel(3) + 7;  // P3.3 - DCDC
-    adc_val[2] = ADC_ReadChannel(4) + 1;  // P5.4 - SSD
+    // 1. 读取三路 ADC（每次读取前自动切换通道）
+    adc_val[0] = ADC_ReadChannel(2);  // P3.2 - JMS583
+    adc_val[1] = ADC_ReadChannel(3);  // P3.3 - DCDC
+    adc_val[2] = ADC_ReadChannel(4);  // P5.4 - SSD
 
-    // 2. ADC → 温度
+    // 2. ADC → 温度  加的系数代表实际芯片的温度要比测量的要高一些
     for (i = 0; i < 3; i++) {
         temps[i] = ntc_raw_to_temp(adc_val[i]);
+		switch(i){
+			case 0:
+				temps[i] += 35;
+				break;
+			case 1:
+				temps[i] += 0;
+				break;
+			default:
+				temps[i] += 30;
+		}
     }
 
     // 3. 一阶低通滤波：out = out*(256-K)/256 + new*K/256
     for (i = 0; i < 3; i++) {
 		filtered_temps[i] = temps[i];
-        //filtered_temps[i] = (filtered_temps[i] * (256 - FILTER_K) + temps[i] * FILTER_K) >> 8;
+        filtered_temps[i] = (filtered_temps[i] * (256 - FILTER_K) + temps[i] * FILTER_K) >> 8;
         out_temps[i] = filtered_temps[i];
     }
 

@@ -21,9 +21,9 @@
 #define SENSOR_SSD      2   // M.2 固态下方
 
 // 温度权重（总和应为 1.0，这里用整数表示，分母 100）
-#define WEIGHT_JMS583   30  // 30%
-#define WEIGHT_DCDC     45  // 45%
-#define WEIGHT_SSD      25  // 25%
+#define WEIGHT_JMS583   50  // 50%
+#define WEIGHT_DCDC     5   // 5%
+#define WEIGHT_SSD      45  // 45%
 
 // 软件一阶低通滤波系数（0~255，越大越平滑）
 #define FILTER_K        32  // 新值占比 32/256 = 12.5%

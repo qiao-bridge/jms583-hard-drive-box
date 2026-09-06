@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   STC8G_GPIO                                                            08/31/2026 15:53:21 PAGE 1   
+C51 COMPILER V9.54   STC8G_GPIO                                                            09/06/2026 17:01:47 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_GPIO
@@ -62,7 +62,7 @@ line level    source
   52           * @brief 设置指定GPIO引脚的电平状态
   53           * @note  操作逻辑：直接读写端口输出寄存器Px，位操作为原子指令，可在中断中安全调用
   54           */
-C51 COMPILER V9.54   STC8G_GPIO                                                            08/31/2026 15:53:21 PAGE 2   
+C51 COMPILER V9.54   STC8G_GPIO                                                            09/06/2026 17:01:47 PAGE 2   
 
   55          bit stc8g_gpio_set_level(unsigned char port, unsigned char pin, bit level)
   56          {    

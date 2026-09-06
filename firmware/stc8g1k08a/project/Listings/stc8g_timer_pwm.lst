@@ -1,4 +1,4 @@
-C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 1   
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       09/06/2026 17:01:47 PAGE 1   
 
 
 C51 COMPILER V9.54, COMPILATION OF MODULE STC8G_TIMER_PWM
@@ -62,7 +62,7 @@ line level    source
   52           * PWM周期 T = 1/freq
   53           * 高电平时间 t_high = T * duty/100
   54           * 低电平时间 t_low = T * (100-duty)/100
-C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 2   
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       09/06/2026 17:01:47 PAGE 2   
 
   55           * 高电平计数次数 N_high = t_high / t_count
   56           * 低电平计数次数 N_low = t_low / t_count
@@ -126,7 +126,7 @@ line level    source
  113           * 使能/失能PWM
  114           */
  115          void timer0_pwm_enable(bit en)
-C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       08/31/2026 15:53:21 PAGE 3   
+C51 COMPILER V9.54   STC8G_TIMER_PWM                                                       09/06/2026 17:01:47 PAGE 3   
 
  116          {
  117   1          pwm_en = en;
